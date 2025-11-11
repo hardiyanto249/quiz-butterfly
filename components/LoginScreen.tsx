@@ -10,14 +10,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!login(username, password)) {
-      setError('Invalid username or password.');
-    } else {
-        setError('');
+    setLoading(true);
+    setError('');
+
+    try {
+      const success = await login(username, password);
+      if (!success) {
+        setError('Invalid username or password.');
+      }
+    } catch (err) {
+      setError('Login failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -37,15 +46,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) 
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password (not required for demo)"
+          placeholder="Password"
           className="w-full bg-slate-700 text-white p-3 rounded-lg mb-6 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+          required
         />
         {error && <p className="text-red-400 mb-4">{error}</p>}
         <button
           type="submit"
-          className="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 px-6 rounded-full text-lg transition-transform transform hover:scale-105"
+          disabled={loading}
+          className="w-full bg-violet-600 hover:bg-violet-700 disabled:bg-violet-800 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-full text-lg transition-transform transform hover:scale-105"
         >
-          Login
+          {loading ? 'Logging in...' : 'Login'}
         </button>
       </form>
       <p className="text-slate-400 mt-6">

@@ -1,6 +1,7 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { api } from '../hooks/useApi';
 import type { User } from '../types';
 
 interface LeaderboardScreenProps {
@@ -8,7 +9,27 @@ interface LeaderboardScreenProps {
 }
 
 export const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ onBack }) => {
-  const { users, currentUser } = useAuth();
+  const { currentUser } = useAuth();
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // For now, show only current user in leaderboard since we don't have a global users endpoint
+    // In a real app, you'd have an endpoint to fetch all users' high scores
+    if (currentUser) {
+      // Transform current user to match the expected format
+      const leaderboardUser = {
+        username: currentUser.username,
+        highScores: {
+          easy: currentUser.highScores?.easy || 0,
+          medium: currentUser.highScores?.medium || 0,
+          advance: currentUser.highScores?.advance || 0,
+        }
+      };
+      setUsers([leaderboardUser]);
+    }
+    setLoading(false);
+  }, [currentUser]);
 
   const sortedUsers = [...users]
     .map(user => ({
@@ -39,19 +60,33 @@ export const LeaderboardScreen: React.FC<LeaderboardScreenProps> = ({ onBack }) 
                 </tr>
             </thead>
             <tbody>
-                {sortedUsers.map((user, index) => (
-                    <tr 
-                        key={user.username} 
-                        className={`border-b border-slate-700 ${user.username === currentUser?.username ? 'bg-cyan-900/40' : ''}`}
-                    >
-                        <td className="p-3 font-bold">{index + 1}</td>
-                        <td className="p-3 font-semibold">{user.username}</td>
-                        <td className="p-3 text-center font-bold text-cyan-300">{user.totalScore}</td>
-                        <td className="p-3 text-center hidden sm:table-cell">{user.highScores.easy}</td>
-                        <td className="p-3 text-center hidden sm:table-cell">{user.highScores.medium}</td>
-                        <td className="p-3 text-center hidden sm:table-cell">{user.highScores.advance}</td>
+                {loading ? (
+                    <tr>
+                        <td colSpan={6} className="p-8 text-center text-slate-400">
+                            Loading leaderboard...
+                        </td>
                     </tr>
-                ))}
+                ) : sortedUsers.length === 0 ? (
+                    <tr>
+                        <td colSpan={6} className="p-8 text-center text-slate-400">
+                            No users found
+                        </td>
+                    </tr>
+                ) : (
+                    sortedUsers.map((user, index) => (
+                        <tr
+                            key={user.username}
+                            className={`border-b border-slate-700 ${user.username === currentUser?.username ? 'bg-cyan-900/40' : ''}`}
+                        >
+                            <td className="p-3 font-bold">{index + 1}</td>
+                            <td className="p-3 font-semibold">{user.username}</td>
+                            <td className="p-3 text-center font-bold text-cyan-300">{user.totalScore}</td>
+                            <td className="p-3 text-center hidden sm:table-cell">{user.highScores.easy}</td>
+                            <td className="p-3 text-center hidden sm:table-cell">{user.highScores.medium}</td>
+                            <td className="p-3 text-center hidden sm:table-cell">{user.highScores.advance}</td>
+                        </tr>
+                    ))
+                )}
             </tbody>
         </table>
       </div>

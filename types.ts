@@ -20,13 +20,16 @@ export interface UserAnswer {
 export type QuizState = 'playing' | 'finished';
 
 export interface User {
+  id?: number;
   username: string;
   password?: string; // Stored hashed in a real app
-  highScores: {
+  highScores?: {
     easy: number;
     medium: number;
     advance: number;
   };
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface QuizProgress {

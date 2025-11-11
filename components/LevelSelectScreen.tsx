@@ -57,7 +57,7 @@ export const LevelSelectScreen: React.FC<LevelSelectScreenProps> = ({ onStartQui
         {(['easy', 'medium', 'advance'] as Difficulty[]).map(level => (
             <div key={level} className="bg-slate-700/50 p-4 rounded-lg flex flex-col items-center">
                 <h2 className="text-2xl font-bold capitalize text-slate-100">{level}</h2>
-                <p className="text-sm text-slate-400 mb-4">High Score: {currentUser?.highScores[level] ?? 0}</p>
+                <p className="text-sm text-slate-400 mb-4">High Score: {currentUser?.highScores?.[level] ?? 0}</p>
                 <button
                     onClick={() => onStartQuiz(level)}
                     className="bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-105"

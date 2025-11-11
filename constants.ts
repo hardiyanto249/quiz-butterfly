@@ -1,5 +1,7 @@
 import type { Question, Difficulty } from './types';
 
+export const API_BASE_URL = "http://localhost:8080";
+
 const generateQuestions = (): Record<Difficulty, Question[]> => {
   const easy: Question[] = [
     // 50 Easy Questions from the provided paper

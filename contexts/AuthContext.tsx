@@ -1,71 +1,167 @@
 
-import React, { createContext, useContext, ReactNode } from 'react';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import { api } from '../hooks/useApi';
 import type { User, Difficulty } from '../types';
 
 interface AuthContextType {
   currentUser: User | null;
   users: User[];
-  login: (username: string, password_not_used: string) => boolean;
-  register: (username: string, password_not_used: string) => boolean;
+  login: (username: string, password: string) => Promise<boolean>;
+  register: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
-  updateHighScore: (difficulty: Difficulty, score: number) => void;
+  updateHighScore: (difficulty: Difficulty, score: number) => Promise<void>;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [users, setUsers] = useLocalStorage<User[]>('users', []);
-  const [currentUser, setCurrentUser] = useLocalStorage<User | null>('currentUser', null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const login = (username: string, password_not_used: string): boolean => {
-    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-    if (user) {
-      // In a real app, you would compare hashed passwords.
-      // For this simple case, we'll just log them in.
-      setCurrentUser(user);
-      return true;
+  // Check for existing auth token on mount
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      // Validate token by fetching profile
+      api.get('/api/profile')
+        .then((profile: any) => {
+          // Transform backend user format to frontend format
+          const user = {
+            id: profile.user.id,
+            username: profile.user.username,
+            highScores: {
+              easy: 0,
+              medium: 0,
+              advance: 0,
+            },
+            created_at: profile.user.created_at,
+            updated_at: profile.user.updated_at,
+          };
+
+          // Add high scores from the profile response
+          if (profile.high_scores) {
+            profile.high_scores.forEach((hs: any) => {
+              if (hs.difficulty === 'easy') user.highScores.easy = hs.score;
+              if (hs.difficulty === 'medium') user.highScores.medium = hs.score;
+              if (hs.difficulty === 'advance') user.highScores.advance = hs.score;
+            });
+          }
+
+          setCurrentUser(user);
+        })
+        .catch(() => {
+          localStorage.removeItem('authToken');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
     }
-    return false;
+  }, []);
+
+  const login = async (username: string, password: string): Promise<boolean> => {
+    try {
+      const response = await api.post('/auth/login', { username, password });
+      if (response.token) {
+        localStorage.setItem('authToken', response.token);
+
+        // Transform backend user format to frontend format
+        const user = {
+          id: response.user.id,
+          username: response.user.username,
+          highScores: {
+            easy: 0,
+            medium: 0,
+            advance: 0,
+          },
+          created_at: response.user.created_at,
+          updated_at: response.user.updated_at,
+        };
+
+        setCurrentUser(user);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
+    }
   };
 
-  const register = (username: string, password_not_used: string): boolean => {
-    if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
-      return false; // Username already exists
+  const register = async (username: string, password: string): Promise<boolean> => {
+    try {
+      const response = await api.post('/auth/register', { username, password });
+      if (response.token) {
+        localStorage.setItem('authToken', response.token);
+
+        // Transform backend user format to frontend format
+        const user = {
+          id: response.user.id,
+          username: response.user.username,
+          highScores: {
+            easy: 0,
+            medium: 0,
+            advance: 0,
+          },
+          created_at: response.user.created_at,
+          updated_at: response.user.updated_at,
+        };
+
+        setCurrentUser(user);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Register error:', error);
+      return false;
     }
-    const newUser: User = {
-      username,
-      highScores: { easy: 0, medium: 0, advance: 0 },
-    };
-    setUsers([...users, newUser]);
-    setCurrentUser(newUser);
-    return true;
   };
 
   const logout = () => {
+    localStorage.removeItem('authToken');
     setCurrentUser(null);
   };
 
-  const updateHighScore = (difficulty: Difficulty, score: number) => {
-    if (currentUser) {
-      const userIndex = users.findIndex(u => u.username === currentUser.username);
-      if (userIndex !== -1) {
-        const updatedUsers = [...users];
-        const userToUpdate = { ...updatedUsers[userIndex] };
-        
-        if (score > userToUpdate.highScores[difficulty]) {
-            userToUpdate.highScores[difficulty] = score;
-            updatedUsers[userIndex] = userToUpdate;
-            setUsers(updatedUsers);
-            setCurrentUser(userToUpdate);
-        }
+  const updateHighScore = async (difficulty: Difficulty, score: number): Promise<void> => {
+    // High scores are updated automatically in the backend when quiz finishes
+    // We can fetch the updated profile to refresh local state
+    try {
+      const profile = await api.get('/api/profile');
+
+      // Transform backend user format to frontend format
+      const user = {
+        id: profile.user.id,
+        username: profile.user.username,
+        highScores: {
+          easy: 0,
+          medium: 0,
+          advance: 0,
+        },
+        created_at: profile.user.created_at,
+        updated_at: profile.user.updated_at,
+      };
+
+      // Add high scores from the profile response
+      if (profile.high_scores) {
+        profile.high_scores.forEach((hs: any) => {
+          if (hs.difficulty === 'easy') user.highScores.easy = hs.score;
+          if (hs.difficulty === 'medium') user.highScores.medium = hs.score;
+          if (hs.difficulty === 'advance') user.highScores.advance = hs.score;
+        });
       }
+
+      setCurrentUser(user);
+    } catch (error) {
+      console.error('Error updating high score:', error);
     }
   };
 
 
   return (
-    <AuthContext.Provider value={{ currentUser, users, login, register, logout, updateHighScore }}>
+    <AuthContext.Provider value={{ currentUser, users, login, register, logout, updateHighScore, loading }}>
       {children}
     </AuthContext.Provider>
   );

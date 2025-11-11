@@ -74,6 +74,20 @@ export const QuestionScreen: React.FC<QuestionScreenProps> = ({
           </button>
         ))}
       </div>
+
+      {isAnswered && (
+        <div className="mt-6 p-4 bg-slate-700/50 rounded-lg border border-slate-600 animate-fade-in">
+          <h3 className="text-lg font-semibold text-cyan-400 mb-2">Explanation:</h3>
+          <p className="text-slate-200 mb-3">
+            The correct answer is: <span className="font-bold text-green-400">{question.options[question.correctAnswerIndex]}</span>
+          </p>
+          {question.reference && (
+            <div className="text-sm text-slate-400">
+              <span className="font-medium">Reference:</span> {question.reference}
+            </div>
+          )}
+        </div>
+      )}
       
       <div className="mt-8 flex justify-between items-center">
          <button
